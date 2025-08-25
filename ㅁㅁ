@@ -1,0 +1,1 @@
+python select_and_execute.py --video "/hub_data2/intern/jinwoo/FlashVTG/qvhighlight/videos/RoripwjYFp8_60.0_210.0.mp4" --query "find fruits during man talking" --show_vtl
