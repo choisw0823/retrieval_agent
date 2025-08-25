@@ -135,7 +135,7 @@ class ChatRunner:
 class PlanExecutor:
     """Plan을 실행하는 메인 클래스"""
     
-    def __init__(self, video_path: str, model: str = "gemini-1.5-pro-latest", device: str = "cuda"):
+    def __init__(self, video_path: str, model: str = "gemini-2.5-pro", device: str = "cuda"):
         self.video_path = video_path
         self.model = model
         self.mr = MomentRetrievalMR(video_path=video_path, device=device)
@@ -154,24 +154,11 @@ class PlanExecutor:
         spans = _fetch(self.mr, q, node.temporal_window, int(node.hint.get("mr_topk", 5)))
         return key, spans, q
 
-    def _eval_sequence_ba(self, seq: Sequence, l: Probe | Join | list[Span], r: Probe | Join | list[Span]) -> Tuple[str, List[Span]]:
-        if isinstance(l, Probe):
-            _, lspans, lq = self._eval_probe(l)
-        elif isinstance(l, Join):
-            _, lspans = self._eval_node(l)
-            lq = ''
-        elif isinstance(l, list):
-            lspans = l
-            lq = ''
+    def _eval_sequence_ba(self, seq: Sequence, l: Probe | Join | Sequence, r: Probe | Join | Sequence) -> Tuple[str, List[Span]]:
+        _, lspans, lq = self._eval_node(l)
+        _, rspans, rq = self._eval_node(r)
 
-        if isinstance(r, Probe):
-            _, rspans, rq = self._eval_probe(r)   
-        elif isinstance(r, Join):
-            _, rspans = self._eval_node(r)
-            rq = ''
-        elif isinstance(r, list):
-            rspans = r
-            rq = ''
+
 
         op = (seq.condition or {}).get("op", "BEFORE").upper()
         emit = getattr(seq, "emit", "right").lower()
@@ -187,13 +174,14 @@ class PlanExecutor:
         if res.get("success"):
             final_pairs = res["inspection_result"].get("pairs", [])
             return f"seq_{op.lower()}_{emit}", _emit_spans_from_pairs(final_pairs, emit)
-        return f"seq_{op.lower()}_{emit}", []
+        return f"seq_{op.lower()}_{emit}", [], f"({lq} {op} {rq})"
 
     def _eval_join(self, join: Join) -> Tuple[str, List[Span]]:
         print(f"[JOIN] Evaluating join with {len(join.inputs)} inputs")
         input_results = [self._eval_node(node) for node in join.inputs]
         result_spans = []
         if join.condition.get("op", "").lower() == 'action':
+            actor, object = None, None
             for inp in join.inputs:
                 if join.condition.get("args", {}).get("actor") == inp.target_alias:
                     actor = inp.query_text
@@ -209,6 +197,7 @@ class PlanExecutor:
             return f"join_action", result_spans, core_query
 
         elif  join.condition.get("op", "").lower() == 'relation':
+            left, right = None, None
             for inp in join.inputs:
                 if join.condition.get("args", "").get("left") == inp.target_alias:
                     left = inp.query_text
@@ -268,39 +257,9 @@ class PlanExecutor:
             print(f"[SEQUENCE] Expected 2 steps, got {len(sequence.steps)}")
             return "sequence_invalid", []
         
-        # 1. BEFORE/AFTER 특수 케이스 (2개 Probe)
-        if all(isinstance(s, Probe) for s in sequence.steps):
-            return self._eval_sequence_ba(sequence, sequence.steps[0], sequence.steps[1])
         
-        # 첫 번째 단계 실행
-        step1_key, step1_spans = self._eval_node(sequence.steps[0])
+        return self._eval_sequence_ba(sequence, sequence.steps[0], sequence.steps[1])
         
-        if not step1_spans:
-            print(f"[SEQUENCE] Step 1 produced no spans, returning empty result")
-            return f"seq_{step1_key}_empty", []
-        
-        step2_key, step2_spans = self._eval_node(sequence.steps[1])
-        
-        if not step2_spans:
-            print(f"[SEQUENCE] Step 2 produced no spans, returning step 1 result")
-            return f"seq_{step1_key}_only", step1_spans
-        
-        # 두 단계 결과를 결합 (AND 로직: 시간적 겹침)
-        combined_spans = []
-        for span1 in step1_spans:
-            for span2 in step2_spans:
-                # 시간적 겹침이 있으면 결합
-                if (span1['t1'] > span2['t0'] and span1['t0'] < span2['t1']):
-                    combined_span = {
-                        't0': max(span1['t0'], span2['t0']),
-                        't1': min(span1['t1'], span2['t1']),
-                        'score': min(span1.get('score', 0), span2.get('score', 0))
-                    }
-                    combined_spans.append(combined_span)
-        
-        print(f"[SEQUENCE] Combined result: {len(combined_spans)} overlapping spans")
-        return f"seq_{step1_key}_{step2_key}", combined_spans
-
     def _eval_generic_node(self, node: PlanNode) -> Tuple[str, List[Span]]:
         all_spans = []
         input_keys = []
