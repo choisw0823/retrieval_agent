@@ -74,6 +74,17 @@ class ChatRunner:
         history: List[Dict[str, Any]] = []
         chat = GeminiChatJSON(model=self.ctx.model)
 
+        # 초기 상태 시각화
+        print(f"[VISUALIZATION] Initial state: A={len(A)} spans, B={len(B)} spans")
+        try:
+            save_path = f"viz/initial_state_{left_query[:20]}_{right_query[:20]}.png"
+            os.makedirs("viz", exist_ok=True)
+            visualize_spans(A, B, left_query, right_query, 
+                          f"Initial State: {left_query} vs {right_query}", 
+                          self.ctx.video_end, save_path=save_path)
+        except Exception as e:
+            print(f"[VISUALIZATION] Failed to visualize initial state: {e}")
+
         # 반복적 문제 해결
         for it in range(1, max_iters + 1):
             insp_result = self.inspector_fn(A, B, **context_kwargs)
@@ -83,6 +94,17 @@ class ChatRunner:
             
             # 성공 조건 확인
             if not issues:
+                # 최종 성공 상태 시각화
+                print(f"[VISUALIZATION] Final success state: A={len(A)} spans, B={len(B)} spans")
+                try:
+                    save_path = f"viz/final_success_{left_query[:20]}_{right_query[:20]}_iter{it}.png"
+                    os.makedirs("viz", exist_ok=True)
+                    visualize_spans(A, B, left_query, right_query, 
+                                  f"FINAL SUCCESS: {left_query} vs {right_query} (Iter {it})", 
+                                  self.ctx.video_end, save_path=save_path)
+                except Exception as e:
+                    print(f"[VISUALIZATION] Failed to visualize final success: {e}")
+                
                 return { "success": True, "status": "SUCCESS", "reason": "All issues resolved",
                          "final_left": A, "final_right": B, "history": history, "inspection_result": insp_result }
 
@@ -107,16 +129,41 @@ class ChatRunner:
                                                           current_issue=current_issue, mr_backend=self.ctx.mr)
                     action_changes["action_id"] = ai
                     add_action_changes(iter_history, action_changes)
+                    
+                    # 액션 실행 후 시각화 (LLM으로 인한 변화 과정)
+                    if A or B:
+                        print(f"[VISUALIZATION] After action {act} (iteration {it}): A={len(A)} spans, B={len(B)} spans")
+                        try:
+                            save_path = f"viz/action_{act}_iter{it}_{left_query[:20]}_{right_query[:20]}.png"
+                            os.makedirs("viz", exist_ok=True)
+                            visualize_spans(A, B, left_query, right_query, 
+                                          f"After Action {act} (Iter {it}): {left_query} vs {right_query}", 
+                                          self.ctx.video_end, save_path=save_path)
+                        except Exception as e:
+                            print(f"[VISUALIZATION] Failed to visualize after action {act}: {e}")
+                    
                     if act == "stop" and action.get("status") == "SUCCESS":
                         chat = GeminiChatJSON(model=self.ctx.model)
                         break
                 except Exception as e:
+                    print(e)
                     print(f"[ERROR] Action {act} failed: {e}")
                     action_changes = {"action_id": ai, "action_type": act, "error": str(e)}
                     add_action_changes(iter_history, action_changes)
             
             finalize_iteration_history(iter_history, A, B)
             history.append(iter_history)
+
+            # iteration 완료 후 현재 상태 시각화
+            print(f"[VISUALIZATION] After iteration {it}: A={len(A)} spans, B={len(B)} spans")
+            try:
+                save_path = f"viz/iteration_{it}_{left_query[:20]}_{right_query[:20]}.png"
+                os.makedirs("viz", exist_ok=True)
+                visualize_spans(A, B, left_query, right_query, 
+                              f"After Iteration {it}: {left_query} vs {right_query}", 
+                              self.ctx.video_end, save_path=save_path)
+            except Exception as e:
+                print(f"[VISUALIZATION] Failed to visualize after iteration {it}: {e}")
 
             if any(a.get("action") == "stop" for a in actions):
                 break
@@ -152,6 +199,16 @@ class PlanExecutor:
         key = node.target_alias or "probe"
         q = node.query_text
         spans = _fetch(self.mr, q, node.temporal_window, int(node.hint.get("mr_topk", 5)))
+        # Probe 결과 시각화
+        if spans:
+            print(f"[VISUALIZATION] Probe '{key}' result: {len(spans)} spans")
+            try:
+                save_path = f"viz/probe_{key}_{q[:20]}.png"
+                os.makedirs("viz", exist_ok=True)
+                visualize_spans(spans, [], q, "", 
+                              f"Probe: {key} - {q}", self.video_end, save_path=save_path)
+            except Exception as e:
+                print(f"[VISUALIZATION] Failed to visualize probe result: {e}")
         return key, spans, q
 
     def _eval_sequence_ba(self, seq: Sequence, l: Probe | Join | Sequence, r: Probe | Join | Sequence) -> Tuple[str, List[Span]]:
@@ -168,7 +225,7 @@ class PlanExecutor:
         B = _dedup_spans(rspans)
 
         runner = ChatRunner(self.ctx, inspect_order)
-        context = {"operator": op, "emit": emit, "a_query": lq, "b_query": rq}
+        context = {"operator": op, "emit": emit}
         res = runner.run(A, B, lq, rq, prompt_creator=_create_focused_prompt, **context)
 
         if res.get("success"):
@@ -187,13 +244,27 @@ class PlanExecutor:
                     actor = inp.query_text
                 if join.condition.get("args", {}).get("object") == inp.target_alias:
                     object = inp.query_text
-            core_query = ("" if actor is None else actor) + join.condition.get('verb', "") +  ("" if object is None else object)
-            question = "Is there scene that" + core_query + "in video? Give me the answer yes or no."
+            core_query = ("" if actor is None else actor) +' '+ join.condition.get('verb', "") + ' ' + ("" if object is None else object)
+            question = "Is there scene that " + core_query + " in video? Give me the answer yes or no."
 
-            for i, span in enumerate(input_results):
-                answer = self.ctx.vlm.query(span.get('t0'), span.get('t1'), question)
-                if 'yes' in answer[0].lower():
-                    result_spans.append(span)
+            for i, r in enumerate(input_results):
+                for span in r[1]:
+                    answer = self.ctx.vlm.query(span.get('t0'), span.get('t1'), question)
+                    if (isinstance(answer[0], str) and ('yes' in answer[0].lower())) or (isinstance(answer[0], bool) and answer[0]):
+                        result_spans.append(span)
+            
+            # Action join 결과 시각화
+            if result_spans:
+                print(f"[VISUALIZATION] Action join result: {len(result_spans)} spans")
+                try:
+                    save_path = f"viz/action_join_{core_query[:20]}.png"
+                    os.makedirs("viz", exist_ok=True)
+                    # Action join은 단일 결과이므로 빈 B 리스트와 함께 시각화
+                    visualize_spans(result_spans, [], core_query, "", 
+                                  f"Action Join: {core_query}", self.video_end, save_path=save_path)
+                except Exception as e:
+                    print(f"[VISUALIZATION] Failed to visualize action join result: {e}")
+            
             return f"join_action", result_spans, core_query
 
         elif  join.condition.get("op", "").lower() == 'relation':
@@ -203,13 +274,27 @@ class PlanExecutor:
                     left = inp.query_text
                 if join.condition.get("args", "").get("right") == inp.target_alias:
                     right = inp.query_text
-            core_query = ("" if left is None else left) + join.condition.get('type', "") +  ("" if right is None else right)
-            question = "Is there scene that" + core_query + "in video? Give me the answer yes or no."
+            core_query = ("" if left is None else left) + ' ' + join.condition.get('type', "") + ' ' + ("" if right is None else right)
+            question = "Is there scene that " + core_query + " in video? Give me the answer yes or no."
 
-            for i, span in enumerate(input_results):
-                answer = self.ctx.vlm.query(span.get('t0'), span.get('t1'), question)
-                if 'yes' in answer[0].lower():
-                    result_spans.append(span)
+            for i, r in enumerate(input_results):
+                for span in r[1]:
+                    answer = self.ctx.vlm.query(span.get('t0'), span.get('t1'), question)
+                    if (isinstance(answer[0], str) and ('yes' in answer[0].lower())) or (isinstance(answer[0], bool) and answer[0]):
+                        result_spans.append(span)
+            
+            # Relation join 결과 시각화
+            if result_spans:
+                print(f"[VISUALIZATION] Relation join result: {len(result_spans)} spans")
+                try:
+                    save_path = f"viz/relation_join_{core_query[:20]}.png"
+                    os.makedirs("viz", exist_ok=True)
+                    # Relation join은 단일 결과이므로 빈 B 리스트와 함께 시각화
+                    visualize_spans(result_spans, [], core_query, "", 
+                                  f"Relation Join: {core_query}", self.video_end, save_path=save_path)
+                except Exception as e:
+                    print(f"[VISUALIZATION] Failed to visualize relation join result: {e}")
+            
             return f"join_relation", result_spans, core_query
 
         else:
@@ -219,16 +304,37 @@ class PlanExecutor:
                 right_key, right_spans, right_query = input_results[i]
                 print(f"[JOIN] Processing step: {len(result_spans)} spans × {len(right_spans)} spans")
                 
+                # Join 단계별 입력 상태 시각화
+                print(f"[VISUALIZATION] Join step {i} input: {len(result_spans)} × {len(right_spans)} spans")
+                try:
+                    save_path = f"viz/join_step{i}_input_{result_key[:20]}_{right_key[:20]}.png"
+                    os.makedirs("viz", exist_ok=True)
+                    visualize_spans(result_spans, right_spans, result_query, right_query, 
+                                  f"Join Step {i} Input: {result_key} vs {right_key}", self.video_end, save_path=save_path)
+                except Exception as e:
+                    print(f"[VISUALIZATION] Failed to visualize join step {i} input: {e}")
+                
                 time_mode = (join.policy or {}).get("time_mode", "DURING")
                 
                 runner = ChatRunner(self.ctx, inspect_join)
-                context = {"time_mode": time_mode, "join_node": join}
+                context = {"join_type": join.condition.get("op", "").lower()}
                 res = runner.run(result_spans, right_spans, result_query, right_query, prompt_creator=_create_focused_prompt, **context)
 
                 if res.get("success"):
                     result_spans = res["inspection_result"].get("result_spans", [])
                     result_key = f"{result_key}_{right_key}"
                     print(f"[JOIN] Step successful: {len(result_spans)} spans")
+                    
+                    # Join 단계별 결과 시각화
+                    if result_spans:
+                        print(f"[VISUALIZATION] Join step {i} result: {len(result_spans)} spans")
+                        try:
+                            save_path = f"viz/join_step{i}_result_{result_key[:20]}.png"
+                            os.makedirs("viz", exist_ok=True)
+                            visualize_spans(result_spans, [], result_key, "", 
+                                          f"Join Step {i} Result: {result_key}", self.video_end, save_path=save_path)
+                        except Exception as e:
+                            print(f"[VISUALIZATION] Failed to visualize join step result: {e}")
                 else:
                     print(f"[JOIN] Step failed, returning empty result")
                     return f"join_failed_{result_key}", [], f"({result_query} {join.condition.get('op', '')} {right_query})"
@@ -269,6 +375,16 @@ class PlanExecutor:
             input_keys.append(key)
         result_spans = _dedup_spans(all_spans)
         result_key = f"{type(node).__name__.lower()}_{'_'.join(input_keys)}"
+        # Generic node 결과 시각화
+        if result_spans:
+            print(f"[VISUALIZATION] Generic node '{result_key}' result: {len(result_spans)} spans")
+            try:
+                save_path = f"viz/generic_node_{result_key[:20]}.png"
+                os.makedirs("viz", exist_ok=True)
+                visualize_spans(result_spans, [], result_key, "", 
+                              f"Generic Node: {result_key}", self.video_end, save_path=save_path)
+            except Exception as e:
+                print(f"[VISUALIZATION] Failed to visualize generic node result: {e}")
         return result_key, result_spans
 
     def run(self, ranked_plans: List[Tuple[int, PlanNode]]) -> Dict[str, Any]:
@@ -276,7 +392,7 @@ class PlanExecutor:
         for pidx, plan in ranked_plans:
             print(f"\n[TRYING] Plan {pidx}: {plan}")
             try:
-                key, spans = self._eval_node(plan)
+                key, spans, _ = self._eval_node(plan)
                 exec_report.append({"plan_index": pidx, "key": key, "spans_found": len(spans)})
                 if spans:
                     spans_sorted = sorted(spans, key=_conf, reverse=True)
@@ -325,6 +441,17 @@ if __name__ == "__main__":
             if "history" in report and report["history"]:
                 print_history_summary(report["history"])
                 break
+        # 시각화 추가
+        if result["spans"]:
+            print(f"\n[VISUALIZATION] Creating timeline visualization...")
+            try:
+                save_path = f"viz/final_result_{args.query[:20]}.png"
+                os.makedirs("viz", exist_ok=True)
+                visualize_spans(result["spans"], [], args.query, "", 
+                              f"Final Result: {args.query}", None, save_path=save_path)
+                print(f"[VISUALIZATION] Timeline saved to: {save_path}")
+            except Exception as e:
+                print(f"[VISUALIZATION] Failed to create visualization: {e}")
     else:
         print("\n[RESULT] FAIL")
         print(f"Reason: {result.get('reason', 'Unknown')}")

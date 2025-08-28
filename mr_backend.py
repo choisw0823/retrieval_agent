@@ -122,7 +122,7 @@ class MomentRetrievalMR(MRBackend):
                         end_time = min(end_time, win_end)
                         if start_time >= end_time:
                             continue
-                    if float(confidence) < 0.6:
+                    if float(confidence) < 0.5:
                         continue
                     
                     span = {
@@ -165,10 +165,10 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description="MR Backend 테스트")
     parser.add_argument("--video", type=str, 
-                       default="/hub_data2/intern/jinwoo/FlashVTG/qvhighlight/videos/RoripwjYFp8_60.0_210.0.mp4",
+                       default="/home/intern/a2a_project/retrieval/vtl_retrieval_agent2/cut_segments/s14-d26-cam-002.avi",
                        help="비디오 파일 경로")
     parser.add_argument("--query", type=str, 
-                       default="Fruit scene before man is talking ",
+                       default="person",
                        help="검색 쿼리")
     parser.add_argument("--window", type=str, default=None,
                        help="시간 윈도우 (예: '10,50' = 10초~50초)")

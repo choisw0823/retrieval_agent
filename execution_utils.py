@@ -12,6 +12,7 @@ import re
 import subprocess
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import os
 
 Span = Dict[str, Any]
 
@@ -250,7 +251,7 @@ The JSON in your "Proposed Action" section must strictly adhere to one of the fo
 
 def _create_focused_prompt(issue: Dict[str, Any], video_end: Optional[float],
                           history: List[Dict[str, Any]], summaries: Dict[str, Any],
-                          a_query: str, b_query: str) -> str:
+                          a_query: str, b_query: str, **kwargs) -> str:
     """
     LLM에 전달할 시스템 프롬프트와 사용자 프롬프트를 생성합니다.
     Chain-of-Thought 구조를 사용합니다.
@@ -290,6 +291,31 @@ def _create_focused_prompt(issue: Dict[str, Any], video_end: Optional[float],
             change_info = f" (Added: {total_added}, Removed: {total_removed}, Final: A={final_A}, B={final_B})" if changes else ""
             
             history_str += f"- Iteration {iter_num}: Faced issue '{issue_faced}', Took action(s) '{action_summary}'{change_info}.\n"
+            
+            # 각 액션의 상세 변경사항 추가 (타임스탬프 포함)
+            if changes:
+                for j, change in enumerate(changes):
+                    action_type = change.get('action_type', 'unknown')
+                    added = change.get('added_spans', [])
+                    removed = change.get('removed_spans', [])
+                    
+                    if added or removed:
+                        history_str += f"  - Action {j+1} ({action_type}):\n"
+                        
+                        if added:
+                            history_str += f"    Added: {len(added)} spans\n"
+                            for span_info in added:  # 최대 2개만 표시
+                                timestamp = span_info.get("timestamp", "unknown")
+                                source = span_info.get("source", "unknown")
+                                history_str += f"      • {timestamp} (from {source})\n"
+                        
+                        if removed:
+                            history_str += f"    Removed: {len(removed)} spans\n"
+                            for span_info in removed:  # 최대 2개만 표시
+                                timestamp = span_info.get("timestamp", "unknown")
+                                list_name = span_info.get("list", "?")
+                                reason = span_info.get("reason", "unknown")
+                                history_str += f"      • {list_name}: {timestamp} (reason: {reason})\n"
 
     summaries_str = f"## CURRENT RETRIEVAL RESULTS\n{json.dumps(summaries, indent=2)}"
 
@@ -309,6 +335,36 @@ Analyze the following state of a temporal query task and generate a response in 
 - Possible Actions:
 {recommended_action_str}
 """
+
+    
     
     # --- 4. 시스템 프롬프트와 조합하여 반환 ---
-    return COT_PROFESSIONAL_SYSTEM_PROMPT + user_prompt
+    final_prompt = COT_PROFESSIONAL_SYSTEM_PROMPT + user_prompt
+    
+    # 프롬프트를 파일로 저장 (디버깅/분석용)
+    try:
+        import datetime
+        os.makedirs("prompts", exist_ok=True)
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # 파일명에 쿼리 정보 포함 (20자 제한)
+        a_query_short = a_query[:20].replace(" ", "_") if a_query else "empty"
+        b_query_short = b_query[:20].replace(" ", "_") if b_query else "empty"
+        
+        filename = f"prompts/prompt_{timestamp}_{a_query_short}_{b_query_short}.txt"
+        
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(f"# Generated at: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"# A Query: {a_query}\n")
+            f.write(f"# B Query: {b_query}\n")
+            f.write(f"# Issue Type: {issue.get('type', 'Unknown')}\n")
+            f.write(f"# Video End: {video_end}\n")
+            f.write("="*80 + "\n\n")
+            f.write(final_prompt)
+        
+        print(f"[PROMPT] Saved to: {filename}")
+        
+    except Exception as e:
+        print(f"[PROMPT] Failed to save prompt: {e}")
+    
+    return final_prompt

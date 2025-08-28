@@ -95,25 +95,21 @@ def print_detailed_history(history: List[Dict[str, Any]]) -> None:
             added = change.get("added_spans", [])
             if added:
                 print(f"Added {len(added)} spans:")
-                for j, span_info in enumerate(added[:3]):  # 최대 3개만 출력
+                for j, span_info in enumerate(added):  # 최대 3개만 출력
                     span = span_info.get("span", {})
                     source = span_info.get("source", "unknown")
                     print(f"  {j+1}. [{span.get('t0', 0):.1f}s-{span.get('t1', 0):.1f}s] score={span.get('score', 0):.3f} (from {source})")
-                if len(added) > 3:
-                    print(f"  ... and {len(added)-3} more")
             
             # 제거된 span 상세 정보
             removed = change.get("removed_spans", [])
             if removed:
                 print(f"Removed {len(removed)} spans:")
-                for j, span_info in enumerate(removed[:3]):  # 최대 3개만 출력
+                for j, span_info in enumerate(removed):  # 최대 3개만 출력
                     span = span_info.get("span", {})
                     reason = span_info.get("reason", "unknown")
                     list_name = span_info.get("list", "?")
                     print(f"  {j+1}. {list_name}[{span_info.get('index', '?')}]: [{span.get('t0', 0):.1f}s-{span.get('t1', 0):.1f}s] (reason: {reason})")
-                if len(removed) > 3:
-                    print(f"  ... and {len(removed)-3} more")
-        
+
         # 최종 span 정보
         final_A_spans = iter_data.get("final_A_spans", [])
         final_B_spans = iter_data.get("final_B_spans", [])

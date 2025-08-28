@@ -125,9 +125,30 @@ def _split_action_new_format(action: Dict[str, Any], A: List[Span], B: List[Span
         "action_type": "split",
         "format": "new",
         "specs_processed": len(split_specs),
-        "added_spans": added_spans,
-        "removed_spans": removed_spans
+        "added_spans": [{"span": s["span"], "source": s["source"], "timestamp": f"{s['span'].get('t0', 0):.2f}s-{s['span'].get('t1', 0):.2f}s"} for s in added_spans],
+        "removed_spans": [{"list": s["list"], "index": s["index"], "span": s["span"], "timestamp": f"{s['span'].get('t0', 0):.2f}s-{s['span'].get('t1', 0):.2f}s"} for s in removed_spans]
     }
+    
+    # 상세 로그 출력
+    print(f"[SPLIT] Action completed:")
+    print(f"  - Specs processed: {len(split_specs)}")
+    
+    if added_spans:
+        print(f"  - Added spans:")
+        for i, span_info in enumerate(added_spans):
+            span = span_info["span"]
+            source = span_info["source"]
+            print(f"    {source}: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {span.get('conf', 0):.4f})")
+    
+    if removed_spans:
+        print(f"  - Removed spans:")
+        for i, span_info in enumerate(removed_spans):
+            span = span_info["span"]
+            list_name = span_info["list"]
+            idx = span_info["index"]
+            print(f"    {list_name}[{idx}]: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {span.get('conf', 0):.4f})")
+    
+    print(f"  - Final state: A={len(new_A)} spans, B={len(new_B)} spans")
     
     return new_A, new_B, action_changes
 
@@ -196,9 +217,31 @@ def split_action(action: Dict[str, Any], A: List[Span], B: List[Span]) -> Tuple[
         "action_type": "split",
         "pairs_processed": len(pairs),
         "timestamps_used": len(timestamps_list),
-        "added_spans": added_spans,
-        "removed_spans": removed_spans
+        "added_spans": [{"span": s["span"], "source": s["source"], "timestamp": f"{s['span'].get('t0', 0):.2f}s-{s['span'].get('t1', 0):.2f}s"} for s in added_spans],
+        "removed_spans": [{"list": s["list"], "index": s["index"], "span": s["span"], "timestamp": f"{s['span'].get('t0', 0):.2f}s-{s['span'].get('t1', 0):.2f}s"} for s in removed_spans]
     }
+    
+    # 상세 로그 출력
+    print(f"[SPLIT] Action completed:")
+    print(f"  - Pairs processed: {len(pairs)}")
+    print(f"  - Timestamps used: {len(timestamps_list)}")
+    
+    if added_spans:
+        print(f"  - Added spans:")
+        for i, span_info in enumerate(added_spans):
+            span = span_info["span"]
+            source = span_info["source"]
+            print(f"    {source}: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {span.get('conf', 0):.4f})")
+    
+    if removed_spans:
+        print(f"  - Removed spans:")
+        for i, span_info in enumerate(removed_spans):
+            span = span_info["span"]
+            list_name = span_info["list"]
+            idx = span_info["index"]
+            print(f"    {list_name}[{idx}]: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {span.get('conf', 0):.4f})")
+    
+    print(f"  - Final state: A={len(new_A)} spans, B={len(new_B)} spans")
     
     return new_A, new_B, action_changes
 
@@ -296,9 +339,30 @@ def _concat_action_new_format(action: Dict[str, Any], A: List[Span], B: List[Spa
         "action_type": "concat",
         "format": "new",
         "specs_processed": len(concat_specs),
-        "added_spans": added_spans,
-        "removed_spans": removed_spans
+        "added_spans": [{"span": s["span"], "source": s["source"], "timestamp": f"{s['span'].get('t0', 0):.2f}s-{s['span'].get('t1', 0):.2f}s"} for s in added_spans],
+        "removed_spans": [{"list": s["list"], "index": s["index"], "span": s["span"], "timestamp": f"{s['span'].get('t0', 0):.2f}s-{s['span'].get('t1', 0):.2f}s"} for s in removed_spans]
     }
+    
+    # 상세 로그 출력
+    print(f"[CONCAT] Action completed:")
+    print(f"  - Specs processed: {len(concat_specs)}")
+    
+    if added_spans:
+        print(f"  - Added spans:")
+        for i, span_info in enumerate(added_spans):
+            span = span_info["span"]
+            source = span_info["source"]
+            print(f"    {source}: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {span.get('conf', 0):.4f})")
+    
+    if removed_spans:
+        print(f"  - Removed spans:")
+        for i, span_info in enumerate(removed_spans):
+            span = span_info["span"]
+            list_name = span_info["list"]
+            idx = span_info["index"]
+            print(f"    {list_name}[{idx}]: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {span.get('conf', 0):.4f})")
+    
+    print(f"  - Final state: A={len(new_A)} spans, B={len(new_B)} spans")
     
     return new_A, new_B, action_changes
 
@@ -416,10 +480,33 @@ def concat_action(action: Dict[str, Any], A: List[Span], B: List[Span]) -> Tuple
         "target_list": target_list,
         "pairs_processed": len(pairs),
         "spans_concatenated": len(spans_to_concat),
-        "added_spans": added_spans,
-        "removed_spans": removed_spans,
+        "added_spans": [{"span": s["span"], "source": s["source"], "timestamp": f"{s['span'].get('t0', 0):.2f}s-{s['span'].get('t1', 0):.2f}s"} for s in added_spans],
+        "removed_spans": [{"list": s["list"], "index": s["index"], "span": s["span"], "timestamp": f"{s['span'].get('t0', 0):.2f}s-{s['span'].get('t1', 0):.2f}s"} for s in removed_spans],
         "concatenated_span": concatenated_span
     }
+    
+    # 상세 로그 출력
+    print(f"[CONCAT] Action completed:")
+    print(f"  - Target list: {target_list}")
+    print(f"  - Pairs processed: {len(pairs)}")
+    print(f"  - Spans concatenated: {len(spans_to_concat)}")
+    
+    if added_spans:
+        print(f"  - Added spans:")
+        for i, span_info in enumerate(added_spans):
+            span = span_info["span"]
+            source = span_info["source"]
+            print(f"    {source}: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {span.get('conf', 0):.4f})")
+    
+    if removed_spans:
+        print(f"  - Removed spans:")
+        for i, span_info in enumerate(removed_spans):
+            span = span_info["span"]
+            list_name = span_info["list"]
+            idx = span_info["index"]
+            print(f"    {list_name}[{idx}]: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {span.get('conf', 0):.4f})")
+    
+    print(f"  - Final state: A={len(new_A)} spans, B={len(new_B)} spans")
     
     return new_A, new_B, action_changes
 
@@ -483,9 +570,31 @@ def remove_action(action: Dict[str, Any], A: List[Span], B: List[Span], vlm_back
             "pairs_checked": len(pairs),
             "pairs_kept": len(verified_pairs),
             "verification_results": verification_results,
-            "added_spans": [{"span": s, "source": "remove_A"} for s in added_to_A] + [{"span": s, "source": "remove_B"} for s in added_to_B],
-            "removed_spans": [{"list": "A", "span": s, "reason": "remove_filter"} for s in removed_from_A] + [{"list": "B", "span": s, "reason": "remove_filter"} for s in removed_from_B]
+            "added_spans": [{"span": s, "source": "remove_A", "timestamp": f"{s.get('t0', 0):.2f}s-{s.get('t1', 0):.2f}s"} for s in added_to_A] + [{"span": s, "source": "remove_B", "timestamp": f"{s.get('t0', 0):.2f}s-{s.get('t1', 0):.2f}s"} for s in added_to_B],
+            "removed_spans": [{"list": "A", "span": s, "reason": "remove_filter", "timestamp": f"{s.get('t0', 0):.2f}s-{s.get('t1', 0):.2f}s"} for s in removed_from_A] + [{"list": "B", "span": s, "reason": "remove_filter", "timestamp": f"{s.get('t0', 0):.2f}s-{s.get('t1', 0):.2f}s"} for s in removed_from_B]
         }
+        
+        # 상세 로그 출력
+        print(f"[REMOVE] Action completed:")
+        print(f"  - Prompt: '{prompt}'")
+        print(f"  - Pairs checked: {len(pairs)}")
+        print(f"  - Pairs kept: {len(verified_pairs)}")
+        
+        if added_to_A or added_to_B:
+            print(f"  - Added spans:")
+            for i, span in enumerate(added_to_A):
+                print(f"    A: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {_conf(span):.4f})")
+            for i, span in enumerate(added_to_B):
+                print(f"    B: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {_conf(span):.4f})")
+        
+        if removed_from_A or removed_from_B:
+            print(f"  - Removed spans:")
+            for i, span in enumerate(removed_from_A):
+                print(f"    A: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {_conf(span):.4f})")
+            for i, span in enumerate(removed_from_B):
+                print(f"    B: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {_conf(span):.4f})")
+        
+        print(f"  - Final state: A={len(new_A)} spans, B={len(new_B)} spans")
     else:
         print(f"[REMOVE] No pairs passed verification. Keeping original spans.")
         new_A, new_B = A, B
@@ -515,66 +624,87 @@ def probe_action(action: Dict[str, Any], A: List[Span], B: List[Span],
     Returns:
         (new_A, new_B, action_changes)
     """
-    target_list = action.get("target_list")
-    q = action.get("query")
-    windows = action.get("windows")
-    
-    if target_list not in ["A", "B"] or not q or not windows:
-        return A, B, {"error": "Invalid probe action", "added_spans": [], "removed_spans": []}
-    
-    # 현재 상태 백업 (변경사항 추적용)
-    A_before, B_before = A.copy(), B.copy()
-    
-    added: List[Span] = []
-    for w in windows:
-        new_spans = _fetch(mr_backend, q, w, 5)
-        added.extend(new_spans)
-        print(f"[PROBE] Added {len(new_spans)} spans from {q} in window {w}")
-    
-    issue_type = current_issue.get("type", "")
-    ia = current_issue.get("ia")
-    ib = current_issue.get("ib")
-    
-    # Overlap 이슈인 경우 기존 span 삭제
-    removed_spans = []
-    print(f"[PROBE] Issue type: {issue_type}, ia={ia}, ib={ib}")
-    print(f"[PROBE] Before removal - A: {len(A)} spans, B: {len(B)} spans")
-    
-    if "Overlap" in issue_type:
-        if ia is not None and 0 <= ia < len(A):
-            removed_span = A[ia].copy()
-            removed_spans.append(("A", ia, removed_span))
-            A = [s for i, s in enumerate(A) if i != ia]
-            print(f"[PROBE] Removed A[{ia}]: {removed_span}")
-        if ib is not None and 0 <= ib < len(B):
-            removed_span = B[ib].copy()
-            removed_spans.append(("B", ib, removed_span))
-            B = [s for i, s in enumerate(B) if i != ib]
-            print(f"[PROBE] Removed B[{ib}]: {removed_span}")
-        print(f"[PROBE] After removal - A: {len(A)} spans, B: {len(B)} spans")
-    
-    # 새로운 span들 추가
-    if target_list == "A":
-        A = _dedup_spans(A + added)
-        added_after_dedup = [s for s in A if s not in A_before]
-    else:
-        B = _dedup_spans(B + added)
-        added_after_dedup = [s for s in B if s not in B_before]
-    
-    # 변경사항 기록
-    action_changes = {
-        "action_type": "probe",
-        "target_list": target_list,
-        "query": q,
-        "windows": windows,
-        "added_spans": [{"span": s, "source": "probe"} for s in added_after_dedup],
-        "removed_spans": [{"list": lst, "index": idx, "span": span} for lst, idx, span in removed_spans]
-    }
-    
-    print(f"[PROBE] Final result - A: {len(A)} spans, B: {len(B)} spans")
-    print(f"[PROBE] Final A: {[{'t0': s['t0'], 't1': s['t1'], 'conf': _conf(s)} for s in A]}")
-    print(f"[PROBE] Final B: {[{'t0': s['t0'], 't1': s['t1'], 'conf': _conf(s)} for s in B]}")
-    
+    try:
+        target_list = action.get("target_list")
+        q = action.get("query")
+        windows = action.get("windows")
+        
+        if target_list not in ["A", "B"] or not q or not windows:
+            return A, B, {"error": "Invalid probe action", "added_spans": [], "removed_spans": []}
+        
+        # 현재 상태 백업 (변경사항 추적용)
+        A_before, B_before = A.copy(), B.copy()
+        
+        added: List[Span] = []
+        for w in windows:
+            new_spans = _fetch(mr_backend, q, w, 5)
+            added.extend(new_spans)
+            print(f"[PROBE] Added {len(new_spans)} spans from {q} in window {w}")
+        
+        issue_type = current_issue.get("type", "")
+        ia = current_issue.get("ia")
+        ib = current_issue.get("ib")
+        
+        # Overlap 이슈인 경우 기존 span 삭제
+        removed_spans = []
+        print(f"[PROBE] Issue type: {issue_type}, ia={ia}, ib={ib}")
+        print(f"[PROBE] Before removal - A: {len(A)} spans, B: {len(B)} spans")
+        
+        if "Overlap" in issue_type:
+            if ia is not None and 0 <= ia < len(A):
+                removed_span = A[ia].copy()
+                timestamp = f"{removed_span.get('t0', 0):.2f}s-{removed_span.get('t1', 0):.2f}s"
+                removed_spans.append(("A", ia, removed_span, timestamp))
+                A = [s for i, s in enumerate(A) if i != ia]
+                print(f"[PROBE] Removed A[{ia}]: {removed_span}")
+            if ib is not None and 0 <= ib < len(B):
+                removed_span = B[ib].copy()
+                timestamp = f"{removed_span.get('t0', 0):.2f}s-{removed_span.get('t1', 0):.2f}s"
+                removed_spans.append(("B", ib, removed_span, timestamp))
+                B = [s for i, s in enumerate(B) if i != ib]
+                print(f"[PROBE] Removed B[{ib}]: {removed_span}")
+            print(f"[PROBE] After removal - A: {len(A)} spans, B: {len(B)} spans")
+        
+        # 새로운 span들 추가
+        if target_list == "A":
+            A = _dedup_spans(A + added)
+            added_after_dedup = [s for s in A if s not in A_before]
+        else:
+            B = _dedup_spans(B + added)
+            added_after_dedup = [s for s in B if s not in B_before]
+        
+        # 변경사항 기록
+        action_changes = {
+            "action_type": "probe",
+            "target_list": target_list,
+            "query": q,
+            "windows": windows,
+            "added_spans": [{"span": s, "source": "probe", "timestamp": f"{s.get('t0', 0):.2f}s-{s.get('t1', 0):.2f}s"} for s in added_after_dedup],
+            "removed_spans": [{"list": lst, "index": idx, "span": span, "timestamp": f"{span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s"} for lst, idx, span in removed_spans]
+        }
+        
+        # 상세 로그 출력
+        print(f"[PROBE] Action completed:")
+        print(f"  - Target list: {target_list}")
+        print(f"  - Query: '{q}'")
+        print(f"  - Windows: {windows}")
+        print(f"  - Added {len(added_after_dedup)} spans:")
+        for i, span_info in enumerate(added_after_dedup):
+            span = span_info["span"]
+            timestamp = span_info["timestamp"]
+            conf = span.get("conf", span.get("score", 0))
+            print(f"    {i+1}. {timestamp} (conf: {conf:.4f})")
+        
+        if removed_spans:
+            print(f"  - Removed {len(removed_spans)} spans:")
+            for i, (list_name, idx, span, timestamp) in enumerate(removed_spans):
+                conf = span.get("conf", span.get("score", 0))
+                print(f"    {i+1}. {list_name}[{idx}]: {timestamp} (conf: {conf:.4f})")
+        
+        print(f"  - Final state: A={len(A)} spans, B={len(B)} spans")
+    except Exception as e:
+        print(f"[sdfsfsdf] Error: {e}")
+        return A, B, {"error": str(e), "added_spans": [], "removed_spans": []}
     return A, B, action_changes
 
 def verify_action(action: Dict[str, Any], A: List[Span], B: List[Span], 
@@ -641,9 +771,31 @@ def verify_action(action: Dict[str, Any], A: List[Span], B: List[Span],
             "pairs_checked": len(pairs),
             "pairs_kept": len(verified_pairs),
             "verification_results": verification_results,
-            "added_spans": [{"span": s, "source": "verify_A"} for s in added_to_A] + [{"span": s, "source": "verify_B"} for s in added_to_B],
-            "removed_spans": [{"list": "A", "span": s, "reason": "verify_filter"} for s in removed_from_A] + [{"list": "B", "span": s, "reason": "verify_filter"} for s in removed_from_B]
+            "added_spans": [{"span": s, "source": "verify_A", "timestamp": f"{s.get('t0', 0):.2f}s-{s.get('t1', 0):.2f}s"} for s in added_to_A] + [{"span": s, "source": "verify_B", "timestamp": f"{s.get('t0', 0):.2f}s-{s.get('t1', 0):.2f}s"} for s in added_to_B],
+            "removed_spans": [{"list": "A", "span": s, "reason": "verify_filter", "timestamp": f"{s.get('t0', 0):.2f}s-{s.get('t1', 0):.2f}s"} for s in removed_from_A] + [{"list": "B", "span": s, "reason": "verify_filter", "timestamp": f"{s.get('t0', 0):.2f}s-{s.get('t1', 0):.2f}s"} for s in removed_from_B]
         }
+        
+        # 상세 로그 출력
+        print(f"[VERIFY] Action completed:")
+        print(f"  - Prompt: '{prompt}'")
+        print(f"  - Pairs checked: {len(pairs)}")
+        print(f"  - Pairs kept: {len(verified_pairs)}")
+        
+        if added_to_A or added_to_B:
+            print(f"  - Added spans:")
+            for i, span in enumerate(added_to_A):
+                print(f"    A: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {_conf(span):.4f})")
+            for i, span in enumerate(added_to_B):
+                print(f"    B: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {_conf(span):.4f})")
+        
+        if removed_from_A or removed_from_B:
+            print(f"  - Removed spans:")
+            for i, span in enumerate(removed_from_A):
+                print(f"    A: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {_conf(span):.4f})")
+            for i, span in enumerate(removed_from_B):
+                print(f"    B: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {_conf(span):.4f})")
+        
+        print(f"  - Final state: A={len(A)} spans, B={len(B)} spans")
     else:
         print(f"[VERIFY] No pairs passed verification. Keeping original spans.")
         action_changes = {
@@ -695,9 +847,29 @@ def stop_action(action: Dict[str, Any], A: List[Span], B: List[Span]) -> Tuple[L
     action_changes = {
         "action_type": "stop",
         "proposed_pairs": proposed_pairs,
-        "added_spans": [{"span": s, "source": "stop_solution_A"} for s in added_to_A] + [{"span": s, "source": "stop_solution_B"} for s in added_to_B],
-        "removed_spans": [{"list": "A", "span": s, "reason": "stop_solution_replace"} for s in removed_from_A] + [{"list": "B", "span": s, "reason": "stop_solution_replace"} for s in removed_from_B]
+        "added_spans": [{"span": s, "source": "stop_solution_A", "timestamp": f"{s.get('t0', 0):.2f}s-{s.get('t1', 0):.2f}s"} for s in added_to_A] + [{"span": s, "source": "stop_solution_B", "timestamp": f"{s.get('t0', 0):.2f}s-{s.get('t1', 0):.2f}s"} for s in added_to_B],
+        "removed_spans": [{"list": "A", "span": s, "reason": "stop_solution_replace", "timestamp": f"{s.get('t0', 0):.2f}s-{s.get('t1', 0):.2f}s"} for s in removed_from_A] + [{"list": "B", "span": s, "reason": "stop_solution_replace", "timestamp": f"{s.get('t0', 0):.2f}s-{s.get('t1', 0):.2f}s"} for s in removed_from_B]
     }
+    
+    # 상세 로그 출력
+    print(f"[STOP] Action completed:")
+    print(f"  - Proposed pairs: {len(proposed_pairs)}")
+    
+    if added_to_A or added_to_B:
+        print(f"  - Added spans:")
+        for i, span in enumerate(added_to_A):
+            print(f"    A: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {_conf(span):.4f})")
+        for i, span in enumerate(added_to_B):
+            print(f"    B: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {_conf(span):.4f})")
+    
+    if removed_from_A or removed_from_B:
+        print(f"  - Removed spans:")
+        for i, span in enumerate(removed_from_A):
+            print(f"    A: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {_conf(span):.4f})")
+        for i, span in enumerate(removed_from_B):
+            print(f"    B: {span.get('t0', 0):.2f}s-{span.get('t1', 0):.2f}s (conf: {_conf(span):.4f})")
+    
+    print(f"  - Final state: A={len(A)} spans, B={len(B)} spans")
     
     return A, B, action_changes
 

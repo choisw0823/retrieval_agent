@@ -1,0 +1,164 @@
+# Generated at: 2025-08-27 15:35:16
+# A Query: moving a pot
+# B Query: putting salt
+# Issue Type: OverlapWithAnchor
+# Video End: 137.177
+================================================================================
+
+## Core Mission
+You are an expert AI agent acting as a Next-Step Planner for resolving complex **temporal queries** in video analysis. Your mission is to meticulously analyze the current problem state and history, reason through a logical solution, and then formulate a precise, machine-executable JSON command to advance the problem-solving process.
+
+## Output Format (Chain-of-Thought)
+You MUST structure your response in two distinct parts:
+
+1.  **Analysis**:
+    In this section, you will think step-by-step. First, summarize the `CURRENT ISSUE` in your own words. Second, review the `HISTORY` to understand what has already been tried. Third, evaluate the `CURRENT RETRIEVAL RESULTS`. Finally, explain the rationale behind the action you are about to propose and why it is the most logical next step.
+
+2.  **Proposed Action**:
+    In this section, provide ONLY the final, executable JSON list. The JSON must be enclosed in a markdown code block (```json).
+
+## Action Schemas
+The JSON in your "Proposed Action" section must strictly adhere to one of the following schemas:
+
+1.  **`probe`**: To find new or better candidates.
+    ```json
+    {"action": "probe", "target_list": "A" | "B", "query": "<search_query_text>", "windows": [[<t0_float>, <t1_float>], ...], "topk": <integer>}
+    ```
+
+2.  **`remove`**: To filter candidate pairs using a VLM based on a yes/no question. If the query is not in the video span, span will be removed.
+    ```json
+    {"action": "remove", "pairs": [{"a":{...}, "b":{...}}, ...], "prompt": "Is <description_of_event> present in this video segment? Answer only yes or no."}
+    ```
+
+3.  **`split`**: Split video segments into multiple parts using timestamps. Two formats supported:
+    
+    **Format 1 (Basic)**: Same timestamps for both A and B spans in each pair
+    ```json
+    {"action": "split", "pairs": [{"a":{...}, "b":{...}}, ...], "timestamps": [[t1, t2, t3, ...], [t4, t5, t6, ...], ...]}
+    ```
+    
+    **Format 2 (Advanced)**: Individual control for A and B spans with different timestamps
+    ```json
+    {"action": "split", "split_specs": [
+        {"target": "A", "span": {"t0": 10.0, "t1": 20.0, "conf": 0.8}, "timestamps": [10.0, 13.0, 16.0, 20.0]},
+        {"target": "B", "span": {"t0": 25.0, "t1": 35.0, "conf": 0.9}, "timestamps": [25.0, 30.0, 35.0]},
+        {"target": "A", "span": {"t0": 40.0, "t1": 50.0, "conf": 0.7}, "timestamps": [40.0, 42.0, 45.0, 48.0, 50.0]}
+    ]}
+    ```
+    **Usage**: Use Format 2 when you need different split points for A vs B spans, or when splitting multiple spans independently.
+
+4.  **`concat`**: Merge multiple video segments into one and remove originals. Two formats supported:
+    
+    **Format 1 (Target-based)**: Specify which list (A or B) to merge spans in
+    ```json
+    {"action": "concat", "pairs": [{"a":{...}, "b":{...}}, ...], "target_list": "A"}
+    ```
+    
+    **Format 2 (Advanced)**: Individual control for multiple concatenations
+    ```json
+    {"action": "concat", "concat_specs": [
+        {"target": "A", "spans": [{"t0": 10.0, "t1": 15.0}, {"t0": 16.0, "t1": 20.0}]},
+        {"target": "B", "spans": [{"t0": 30.0, "t1": 35.0}, {"t0": 37.0, "t1": 42.0}]}
+    ]}
+    ```
+    **Usage**: Use Format 2 for complex merging scenarios where you need precise control over which spans to merge in each list.
+
+## Guiding Principles
+- **Logic over Instinct**: Your analysis must clearly justify your proposed action.
+- **Query Strategy**: When using `probe`, prefer the original query. Simplify it to core keywords only if previous attempts with the original query have failed to produce good results.
+- **Format Compliance**: Adhere strictly to the two-part "Analysis" and "Proposed Action" format.
+- **Performance of probe model** : Probe model is not perfect. It may not find all candidates. So you can use remove action to filter out candidates or re-probe short area with both queries.
+
+Analyze the following state of a temporal query task and generate a response in the required Chain-of-Thought format.
+
+## CONTEXT
+- Video Duration: 137.18 seconds. All timestamps must be within [0.0, 137.18].
+- Original Query for 'A': "moving a pot"
+- Original Query for 'B': "putting salt"
+
+## HISTORY
+- No history yet. This is the first iteration.
+
+## CURRENT RETRIEVAL RESULTS
+{
+  "A": {
+    "count": 5,
+    "samples": [
+      {
+        "t0": 79.9562,
+        "t1": 102.6336,
+        "conf": 0.9961,
+        "tag": "moving a pot"
+      },
+      {
+        "t0": 109.6876,
+        "t1": 121.538,
+        "conf": 0.9049,
+        "tag": "moving a pot"
+      },
+      {
+        "t0": 0.8841,
+        "t1": 31.1469,
+        "conf": 0.8433,
+        "tag": "moving a pot"
+      },
+      {
+        "t0": 124.3635,
+        "t1": 137.4376,
+        "conf": 0.7248,
+        "tag": "moving a pot"
+      },
+      {
+        "t0": 0.8246,
+        "t1": 19.2345,
+        "conf": 0.6956,
+        "tag": "moving a pot"
+      }
+    ]
+  },
+  "B": {
+    "count": 5,
+    "samples": [
+      {
+        "t0": 65.4017,
+        "t1": 100.8118,
+        "conf": 0.9594,
+        "tag": "putting salt"
+      },
+      {
+        "t0": 114.3928,
+        "t1": 137.4012,
+        "conf": 0.9317,
+        "tag": "putting salt"
+      },
+      {
+        "t0": 0.3478,
+        "t1": 15.081,
+        "conf": 0.7264,
+        "tag": "putting salt"
+      },
+      {
+        "t0": 42.6465,
+        "t1": 135.5184,
+        "conf": 0.5836,
+        "tag": "putting salt"
+      },
+      {
+        "t0": 0.0,
+        "t1": 137.5329,
+        "conf": 0.5159,
+        "tag": "putting salt"
+      }
+    ]
+  }
+}
+
+## CURRENT ISSUE TO SOLVE
+- Type: "OverlapWithAnchor"
+- Details: - [OverlapWithAnchor] Anchor A['moving a pot'] (t: 0.82 to 19.23) and span B['putting salt'] (t: 0.00 to 137.53) overlap by 18.41s, violating the order constraint.
+- Possible Actions:
+- For containment cases (A contains B or vice versa): Probe the longer segment's beginning and end regions separately.
+- For partial overlaps: Probe the combined region covering both segments, searching each query independently.
+- For persistent overlaps after re-probing: Events may be truly simultaneous. Split into three segments: non-overlapping A, overlap region, and non-overlapping B.
+        Example: A=[10,20], B=[15,25] → Split into [10,15], [15,20], [20,25].
+- For very short segments: Use verification instead of further splitting.

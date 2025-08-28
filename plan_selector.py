@@ -71,12 +71,11 @@ Each object must have:
 - "refined_plan": optional, only if you want to refine Probe query_texts
 
 Rules:
-1. Query should be not complex. make simple query as possible without adverb, preposition, etc.
-2. If original query is "man eating", it is better to probe "man" and "eating" separately and join using action join.
-3. If query is "eating", rather than "person eating food", just "eating" is good. And you don't have to probe "person" and "food" separately because "person" is general query that all video scenes have.
-4. Query with verb without object, it captures action well.
-5. If query is "making food", just making is not good. You can query "making food" once, or plan to probe "food", and verify "making" later.
-
+1. The video is cooking video. So scene does not change(in kitchen) and only cooking related action happens.
+2. You can ignore  words in query such as person, kitchen because all video scenes have person and kitchen. This is unnecessary. So you can delete such node
+3. Focus on ingredient and action.
+4. Do not make query complex. Make simple query.
+5. Remove node like a person, in kitchen(relation)
 
 
 
@@ -158,7 +157,7 @@ class PlanSelector:
 
 # ---------------- CLI Demo ----------------
 if __name__ == "__main__":
-    query_text = "a man appears before a dog appears"
+    query_text = "Find where the person gets the cauliflower and a knife from the kitchen before cutting the cauliflower."
     print(f"--- Testing PlanSelector with query: '{query_text}' ---")
     
     selector = PlanSelector()

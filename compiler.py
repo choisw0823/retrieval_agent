@@ -235,7 +235,7 @@ class NL2VTLCompiler:
 if __name__ == "__main__":
     try:
         compiler = NL2VTLCompiler(expand_macro=True)
-        nl_query = "Find scene where man is eating food before making food"
+        nl_query = "Man and woman have a conversation in a train station"
         
         print("="*50)
         print(f"Compiling Query: \"{nl_query}\"")

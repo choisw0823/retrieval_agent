@@ -16,6 +16,9 @@ Return both (1) a VTL program string and (2) its AST JSON. Do not add explanatio
 2. **Describe Formula**  
    Second, use these aliases to construct `ACTION` and `RELATION` predicates. Combine these predicates using temporal and logical operators to represent the overall query.
 
+3. If subject or objective is "A and B" Do not seperate two. "A and B" is just one object.
+4. "Do A and B" does not mean intersection. It means union.
+
 ---
 
 ## VTL CORE SYNTAX (Structured & Uni-modal)
